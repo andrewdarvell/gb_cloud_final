@@ -13,15 +13,12 @@ import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
 import lombok.extern.slf4j.Slf4j;
 import ru.darvell.cloud.server.database.creator.DBInitializer;
-import ru.darvell.cloud.server.database.repositories.UserRepositoryImpl;
-import ru.darvell.cloud.server.database.repositories.UsersRepository;
 import ru.darvell.cloud.server.exceptions.ServerException;
-import ru.darvell.cloud.server.models.User;
 
 
 @Slf4j
 public class Server {
-    private final String ROOT_FOLDER_NAME = "storage";
+    private final String ROOT_STORAGE_PATH = "storage";
 
     public void run() {
         try {
@@ -44,7 +41,7 @@ public class Server {
                             channel.pipeline().addLast(
                                     new ObjectEncoder(),
                                     new ObjectDecoder(ClassResolvers.cacheDisabled(null)),
-                                    new MessageHandler()
+                                    new MessageHandler(ROOT_STORAGE_PATH)
                             );
                         }
                     });
