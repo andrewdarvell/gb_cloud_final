@@ -97,13 +97,12 @@ public class MainWindowController implements Initializable {
                             log.info(errorMessage.getMessage());
                             break;
                         case FILE_MESSAGE:
-                            fileTransmitter.receiveFile((FileMessage) command, (p) -> {}, ()->{});
-//                            fileTransmitter.receiveFile((FileMessage) command,
-//                                    p -> Platform.runLater(() -> progress.setProgress(p)),
-//                                    () -> Platform.runLater(() -> {
-//                                        setDisablingButton(false);
-//                                        updateLocalFileList();
-//                                    }));
+                            fileTransmitter.receiveFile((FileMessage) command,
+                                    p -> Platform.runLater(() -> progress.setProgress(p)),
+                                    () -> Platform.runLater(() -> {
+                                        setDisablingButton(false);
+                                        updateLocalFileList();
+                                    }));
                             break;
                     }
                 }

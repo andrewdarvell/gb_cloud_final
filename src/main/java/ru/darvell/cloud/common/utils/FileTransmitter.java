@@ -46,6 +46,7 @@ public class FileTransmitter {
                 receiveSimpleFile(path, fileMessage);
                 finisher.onFinish();
             } else {
+
                 log.debug("receive file message part {}", fileMessage);
                 try {
                     if (fileMessage.getCurrMessageNumber() == 0) {
@@ -55,7 +56,6 @@ public class FileTransmitter {
                     log.debug("messages count {}, current number {}", fileMessage.getMessagesCount(), fileMessage.getCurrMessageNumber());
                     progressUpdater.update((double) fileMessage.getCurrMessageNumber() / (fileMessage.getMessagesCount() - 1));
                     Files.write(path, fileMessage.getFileData(), APPEND);
-                    log.info(String.valueOf(Files.isWritable(path)));
                     if (fileMessage.isFinalPart()) {
                         finisher.onFinish();
                     }
