@@ -27,6 +27,7 @@ public class InitializerV1Version {
             initVersionTable();
             writeVersion();
             createUsersTable();
+            writeTestUser();
             connection.commit();
         } catch (SQLException e) {
             try {
@@ -58,6 +59,12 @@ public class InitializerV1Version {
                 "password string," +
                 "work_dir_name string" +
                 ")");
+    }
+
+    private void writeTestUser() throws SQLException {
+        PreparedStatement ps = connection.prepareStatement("INSERT INTO users(login, password, work_dir_name) VALUES ('l1','p1','l1')");
+        ps.executeUpdate();
+        ps.close();
     }
 
 }

@@ -12,7 +12,7 @@ public class Client extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        Parent parent = FXMLLoader.load(getClass().getResource("/fx_templates/root_client_template.fxml"));
+        Parent parent = FXMLLoader.load(getClass().getResource("/fx_templates/login_client_template.fxml"));
         stage.setScene(new Scene(parent));
         stage.show();
     }

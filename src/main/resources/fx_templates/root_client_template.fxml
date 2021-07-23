@@ -1,20 +1,80 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
 <?import javafx.scene.layout.ColumnConstraints?>
 <?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.RowConstraints?>
 
-<GridPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="713.0" prefWidth="925.0" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.darvell.cloud.client.MainWindowController">
+<GridPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="737.0" prefWidth="937.0" xmlns="http://javafx.com/javafx/16" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.darvell.cloud.client.MainWindowController">
   <columnConstraints>
-    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-    <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+    <ColumnConstraints hgrow="SOMETIMES" maxWidth="463.0" minWidth="10.0" prefWidth="399.0" />
+      <ColumnConstraints hgrow="SOMETIMES" maxWidth="303.0" minWidth="10.0" prefWidth="95.0" />
+    <ColumnConstraints hgrow="SOMETIMES" maxWidth="431.0" minWidth="10.0" prefWidth="431.0" />
   </columnConstraints>
   <rowConstraints>
     <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
   </rowConstraints>
    <children>
-      <TreeView fx:id="localTree" prefHeight="200.0" prefWidth="200.0" />
-      <TreeView fx:id="remoteTree" prefHeight="688.0" prefWidth="414.0" GridPane.columnIndex="1" />
+      <GridPane>
+        <columnConstraints>
+          <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+        </columnConstraints>
+        <rowConstraints>
+          <RowConstraints maxHeight="40.0" minHeight="10.0" prefHeight="41.0" vgrow="SOMETIMES" />
+          <RowConstraints maxHeight="694.0" minHeight="10.0" prefHeight="672.0" vgrow="SOMETIMES" />
+        </rowConstraints>
+         <children>
+            <ListView fx:id="localList" prefHeight="742.0" prefWidth="412.0" GridPane.rowIndex="1" />
+            <GridPane>
+              <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                <ColumnConstraints hgrow="SOMETIMES" maxWidth="31.0" minWidth="31.0" prefWidth="100.0" />
+              </columnConstraints>
+              <rowConstraints>
+                <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+              </rowConstraints>
+               <children>
+                  <Button mnemonicParsing="false" onAction="#clickLocalUpButton" text="UP" GridPane.columnIndex="1" />
+                  <TextField fx:id="localPathText" prefHeight="25.0" prefWidth="292.0" />
+               </children>
+            </GridPane>
+         </children>
+      </GridPane>
+      <GridPane GridPane.columnIndex="2">
+         <columnConstraints>
+            <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+         </columnConstraints>
+         <rowConstraints>
+            <RowConstraints maxHeight="40.0" minHeight="10.0" prefHeight="41.0" vgrow="SOMETIMES" />
+            <RowConstraints maxHeight="694.0" minHeight="10.0" prefHeight="672.0" vgrow="SOMETIMES" />
+         </rowConstraints>
+         <children>
+            <ListView fx:id="remoteList" prefHeight="742.0" prefWidth="412.0" GridPane.rowIndex="1" />
+            <GridPane>
+               <columnConstraints>
+                  <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                  <ColumnConstraints hgrow="SOMETIMES" maxWidth="31.0" minWidth="31.0" prefWidth="100.0" />
+               </columnConstraints>
+               <rowConstraints>
+                  <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+               </rowConstraints>
+               <children>
+                  <Button mnemonicParsing="false" onAction="#clickRemoteUpButton" text="UP" GridPane.columnIndex="1" />
+                  <TextField fx:id="remotePathText" prefHeight="25.0" prefWidth="292.0" />
+               </children>
+            </GridPane>
+         </children>
+      </GridPane>
+      <AnchorPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1">
+         <children>
+            <Button layoutX="38.0" layoutY="282.0" mnemonicParsing="false" onAction="#doSendToServerAction" text="&gt;" />
+            <Button layoutX="38.0" layoutY="369.0" mnemonicParsing="false" onAction="#doRequestFileAction" text="&lt;" />
+            <ProgressIndicator fx:id="progress" layoutX="37.0" layoutY="221.0" progress="0.0" />
+         </children>
+      </AnchorPane>
    </children>
 </GridPane>
