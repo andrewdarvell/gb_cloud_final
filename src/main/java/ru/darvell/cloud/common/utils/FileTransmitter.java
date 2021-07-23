@@ -8,6 +8,7 @@ import ru.darvell.cloud.server.models.FileStat;
 import ru.darvell.cloud.server.models.User;
 
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,7 +56,14 @@ public class FileTransmitter {
                     }
                     log.debug("messages count {}, current number {}", fileMessage.getMessagesCount(), fileMessage.getCurrMessageNumber());
                     progressUpdater.update((double) fileMessage.getCurrMessageNumber() / (fileMessage.getMessagesCount() - 1));
-                    Files.write(path, fileMessage.getFileData(), APPEND);
+
+
+//                    Files.write(path, fileMessage.getFileData(), APPEND);
+                    FileOutputStream fileOutputStream = new FileOutputStream(path.toString(), true);
+                    fileOutputStream.write(fileMessage.getFileData());
+                    fileOutputStream.flush();
+                    fileOutputStream.close();
+
                     if (fileMessage.isFinalPart()) {
                         finisher.onFinish();
                     }
