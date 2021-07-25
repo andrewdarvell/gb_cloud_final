@@ -2,9 +2,9 @@ package ru.darvell.cloud.common;
 
 public enum CommandType {
     AUTH_MESSAGE,
+    REGISTER_MESSAGE,
     SUCCESS_AUTH_MESSAGE,
     ERROR_MESSAGE,
-    REGISTER,
     UP_REQUEST,
     CD_REQUEST,
     FILE_REQUEST,
@@ -13,4 +13,5 @@ public enum CommandType {
     LIST_MESSAGE,
     DELETE_REQUEST,
     RENAME_REQUEST
+
 }

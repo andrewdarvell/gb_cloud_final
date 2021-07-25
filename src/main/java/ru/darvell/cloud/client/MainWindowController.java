@@ -5,21 +5,25 @@ import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.scene.control.Button;
-import javafx.scene.control.ListView;
-import javafx.scene.control.ProgressIndicator;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.image.ImageView;
+import javafx.util.Callback;
 import lombok.extern.slf4j.Slf4j;
+import ru.darvell.cloud.client.views.DeleteListAction;
+import ru.darvell.cloud.client.views.FileListItem;
+import ru.darvell.cloud.client.views.MyListCell;
 import ru.darvell.cloud.common.AbstractCommand;
 import ru.darvell.cloud.common.commands.*;
 import ru.darvell.cloud.common.utils.FileTransmitter;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -42,10 +46,10 @@ public class MainWindowController implements Initializable {
     public TextField remotePathText;
 
     @FXML
-    public ListView<String> localList;
+    public ListView<FileListItem> localList;
 
     @FXML
-    public ListView<String> remoteList;
+    public ListView<FileListItem> remoteList;
 
     @FXML
     public ProgressIndicator progress;
@@ -60,21 +64,36 @@ public class MainWindowController implements Initializable {
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        updateLocalPathText();
+        log.debug("Main window init");
+        initCellFactory();
         addNavigationListeners();
     }
 
     public void setWorkingSocket(Socket socket) {
         try {
+            log.debug("Send data to main window process");
             os = new ObjectEncoderOutputStream(socket.getOutputStream());
             is = new ObjectDecoderInputStream(socket.getInputStream());
             initReader();
             os.writeObject(new ListCommand());
             os.flush();
             fileTransmitter = new FileTransmitter(rootPath, this::deleteFile, FILE_PACKAGE_SIZE);
+            updateLocalPathText();
         } catch (IOException e) {
             log.error("Cannot work with server", e);
         }
+    }
+
+    private void initCellFactory() {
+        localList.setCellFactory(param -> new MyListCell(fileName -> {
+            Path path = rootPath.resolve(fileName);
+            deleteFile(path);
+            updateLocalFileList();
+        }));
+        remoteList.setCellFactory(param -> new MyListCell(fileName -> {
+            sendDeleteFileCommand(fileName);
+            sendListCommand();
+        }));
     }
 
     private void initReader() {
@@ -124,7 +143,7 @@ public class MainWindowController implements Initializable {
         localList.getItems().clear();
         try (Stream<Path> files = Files.list(rootPath)) {
             localList.getItems().addAll(
-                    files.map(i -> i.getFileName().toString())
+                    files.map(i -> new FileListItem(i.getFileName().toString(), Files.isDirectory(i)))
                             .collect(Collectors.toList())
             );
         } catch (IOException e) {
@@ -135,8 +154,8 @@ public class MainWindowController implements Initializable {
     private void addNavigationListeners() {
         localList.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
-                String item = localList.getSelectionModel().getSelectedItem();
-                Path newPath = rootPath.resolve(item);
+                FileListItem item = localList.getSelectionModel().getSelectedItem();
+                Path newPath = rootPath.resolve(item.getName());
                 if (Files.isDirectory(newPath)) {
                     rootPath = newPath;
                     updateLocalPathText();
@@ -146,8 +165,8 @@ public class MainWindowController implements Initializable {
 
         remoteList.setOnMouseClicked(e -> {
             if (e.getClickCount() == 2) {
-                String item = remoteList.getSelectionModel().getSelectedItem();
-                sendCdCommand(item);
+                FileListItem item = remoteList.getSelectionModel().getSelectedItem();
+                sendCdCommand(item.getName());
                 log.debug("send cd command to server");
             }
         });
@@ -179,11 +198,11 @@ public class MainWindowController implements Initializable {
     }
 
     public void doSendToServerAction() {
-        String item = localList.getSelectionModel().getSelectedItem();
+        FileListItem item = localList.getSelectionModel().getSelectedItem();
         if (item != null) {
-            Path path = rootPath.resolve(item);
-            setDisablingButton(true);
+            Path path = rootPath.resolve(item.getName());
             if (!Files.isDirectory(path)) {
+                setDisablingButton(true);
                 sendFileToServer(path);
             }
         }
@@ -191,8 +210,8 @@ public class MainWindowController implements Initializable {
 
     public void doRequestFileAction() {
         try {
-            String item = remoteList.getSelectionModel().getSelectedItem();
-            os.writeObject(new RequestFileMessage(item));
+            FileListItem item = remoteList.getSelectionModel().getSelectedItem();
+            os.writeObject(new RequestFileMessage(item.getName()));
             setDisablingButton(true);
         } catch (IOException e) {
             log.error("error while request file from server", e);
@@ -208,17 +227,47 @@ public class MainWindowController implements Initializable {
                 p -> Platform.runLater(() -> progress.setProgress(p)),
                 () -> setDisablingButton(false)
         );
+    }
 
+    public void sendListCommand() {
+        try {
+            os.writeObject(new ListCommand());
+            os.flush();
+        } catch (IOException e) {
+            log.error("Cannot send list command", e);
+        }
+    }
+
+    public void sendDeleteFileCommand(String fileName) {
+        try {
+            os.writeObject(new DeleteCommand(fileName));
+            os.flush();
+        } catch (IOException e) {
+            log.error("Cannot send delete command", e);
+        }
     }
 
 
     private void deleteFile(Path path) {
-        if (Files.exists(path)) {
-            try {
-                Files.delete(path);
-            } catch (IOException e) {
-                log.error("Error while delete existing file", e);
+        try {
+            if (Files.isDirectory(path)) {
+                deleteFolder(path);
+            } else {
+                Files.deleteIfExists(path);
             }
+        } catch (IOException e) {
+            log.error("Error while delete existing file", e);
+        }
+    }
+
+    private void deleteFolder(Path path) {
+        try {
+            Files.walk(path)
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+        } catch (IOException exception) {
+            exception.printStackTrace();
         }
     }
 

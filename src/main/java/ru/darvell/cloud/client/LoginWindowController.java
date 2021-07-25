@@ -9,6 +9,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import ru.darvell.cloud.common.AbstractCommand;
 import ru.darvell.cloud.common.CommandType;
 import ru.darvell.cloud.common.commands.AuthCommand;
 import ru.darvell.cloud.common.commands.ErrorMessage;
+import ru.darvell.cloud.common.commands.RegisterCommand;
 
 import java.io.IOException;
 import java.net.Socket;
@@ -37,6 +39,13 @@ public class LoginWindowController implements Initializable {
 
     @FXML
     public Button singInButton;
+    
+    @FXML
+    public Button singUpButton;
+
+    @FXML
+    public Label errorMessageLabel;
+
 
 
     @Override
@@ -54,22 +63,29 @@ public class LoginWindowController implements Initializable {
                             Thread.currentThread().interrupt();
                         } else if (command.getType() == CommandType.ERROR_MESSAGE) {
                             log.info(((ErrorMessage) command).getMessage());
+                            Platform.runLater(() -> {
+                                errorMessageLabel.setText(((ErrorMessage) command).getMessage());
+                                errorMessageLabel.setVisible(true);
+                            });
+                            buttonsEnable(false);
                         }
                     }
                 } catch (Exception e) {
                     log.error("Error while handling answer from server");
+                    buttonsEnable(false);
                 }
             });
             readThread.setDaemon(true);
             readThread.start();
         } catch (Exception e) {
             log.error("Something wring while opening connection to server", e);
+            buttonsEnable(false);
         }
 
     }
 
     public void signInAction() {
-        singInButton.setDisable(true);
+        buttonsEnable(true);
         try {
             os.writeObject(AuthCommand.builder()
                     .login(loginText.getText())
@@ -80,6 +96,19 @@ public class LoginWindowController implements Initializable {
             exception.printStackTrace();
         }
 
+    }
+
+    public void signUpAction() {
+        buttonsEnable(true);
+        try {
+            os.writeObject(RegisterCommand.builder()
+                    .login(loginText.getText())
+                    .password(passwordText.getText())
+                    .build());
+            os.flush();
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
     }
 
     public void showMainWindow() {
@@ -100,5 +129,10 @@ public class LoginWindowController implements Initializable {
     private void closeCurrentStage() {
         Stage stage = (Stage) singInButton.getScene().getWindow();
         stage.close();
+    }
+    
+    private void buttonsEnable(boolean enable) {
+        singInButton.setDisable(enable);
+        singUpButton.setDisable(enable);
     }
 }

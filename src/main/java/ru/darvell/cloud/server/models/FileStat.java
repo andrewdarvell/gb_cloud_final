@@ -1,6 +1,7 @@
 package ru.darvell.cloud.server.models;
 
 import lombok.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -12,9 +13,10 @@ import java.util.Date;
 @Data
 @ToString
 @EqualsAndHashCode
+@Slf4j
 public class FileStat {
 
-    public static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    public static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private int id;
     private int userId;
@@ -30,6 +32,7 @@ public class FileStat {
         try {
             this.lastUpdate = simpleDateFormat.parse(s);
         } catch (ParseException e) {
+            log.debug("Error while parsing date", e);
             this.lastUpdate = new Date(System.currentTimeMillis());
         }
     }

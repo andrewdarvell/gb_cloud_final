@@ -120,7 +120,7 @@ public class MstatRepositoryImpl implements MstatRepository {
                 .fileName(resultSet.getString("file_name"))
                 .filePath(resultSet.getString("file_path"))
                 .build();
-        fileStat.setLastUpdate(resultSet.getString("file_path"));
+        fileStat.setLastUpdate(resultSet.getString("last_update"));
         return fileStat;
     }
 
