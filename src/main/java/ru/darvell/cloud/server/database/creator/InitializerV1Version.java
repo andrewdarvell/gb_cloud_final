@@ -28,6 +28,7 @@ public class InitializerV1Version {
             writeVersion();
             createUsersTable();
             writeTestUser();
+            createMultipartStatTable();
             connection.commit();
         } catch (SQLException e) {
             try {
@@ -65,6 +66,17 @@ public class InitializerV1Version {
         PreparedStatement ps = connection.prepareStatement("INSERT INTO users(login, password, work_dir_name) VALUES ('l1','p1','l1')");
         ps.executeUpdate();
         ps.close();
+    }
+
+    private void createMultipartStatTable() throws SQLException {
+        Statement statement = connection.createStatement();
+        statement.execute("CREATE TABLE IF NOT EXISTS mstat (" +
+                "id integer PRIMARY KEY AUTOINCREMENT," +
+                "user_id integer," +
+                "file_name string," +
+                "file_path string," +
+                "last_update string" +
+                ")");
     }
 
 }

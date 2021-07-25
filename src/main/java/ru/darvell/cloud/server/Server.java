@@ -15,6 +15,11 @@ import lombok.extern.slf4j.Slf4j;
 import ru.darvell.cloud.server.database.creator.DBInitializer;
 import ru.darvell.cloud.server.exceptions.ServerException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 
 @Slf4j
 public class Server {
@@ -27,6 +32,16 @@ public class Server {
         } catch (ServerException e) {
             log.error("Server error while check/create DB", e);
             System.exit(-1);
+        }
+
+        Path storagePath = Paths.get("storage");
+        if (!Files.exists(storagePath)) {
+            try {
+                Files.createDirectory(storagePath);
+            } catch (IOException e) {
+                log.error("Error while create root storage path", e);
+                System.exit(-1);
+            }
         }
 
         try {

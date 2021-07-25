@@ -5,6 +5,7 @@ import io.netty.handler.codec.serialization.ObjectEncoderOutputStream;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.control.Button;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ProgressIndicator;
 import javafx.scene.control.TextField;
@@ -49,6 +50,12 @@ public class MainWindowController implements Initializable {
     @FXML
     public ProgressIndicator progress;
 
+    @FXML
+    public Button sendButton;
+
+    @FXML
+    public Button receiveButton;
+
     private Path rootPath = Paths.get(System.getProperty("user.home")).toAbsolutePath();
 
     @Override
@@ -64,7 +71,7 @@ public class MainWindowController implements Initializable {
             initReader();
             os.writeObject(new ListCommand());
             os.flush();
-            fileTransmitter = new FileTransmitter(this::deleteFile, FILE_PACKAGE_SIZE);
+            fileTransmitter = new FileTransmitter(rootPath, this::deleteFile, FILE_PACKAGE_SIZE);
         } catch (IOException e) {
             log.error("Cannot work with server", e);
         }
@@ -75,7 +82,7 @@ public class MainWindowController implements Initializable {
             try {
                 while (true) {
                     AbstractCommand command = (AbstractCommand) is.readObject();
-                    log.info(command.getType().toString());
+                    log.debug(command.getType().toString());
                     switch (command.getType()) {
                         case LIST_MESSAGE:
                             ListMessage listMessage = (ListMessage) command;
@@ -90,7 +97,12 @@ public class MainWindowController implements Initializable {
                             log.info(errorMessage.getMessage());
                             break;
                         case FILE_MESSAGE:
-                            fileTransmitter.receiveFile((FileMessage) command, rootPath, p ->{});
+                            fileTransmitter.receiveFile((FileMessage) command,
+                                    p -> Platform.runLater(() -> progress.setProgress(p)),
+                                    () -> Platform.runLater(() -> {
+                                        setDisablingButton(false);
+                                        updateLocalFileList();
+                                    }));
                             break;
                     }
                 }
@@ -170,6 +182,7 @@ public class MainWindowController implements Initializable {
         String item = localList.getSelectionModel().getSelectedItem();
         if (item != null) {
             Path path = rootPath.resolve(item);
+            setDisablingButton(true);
             if (!Files.isDirectory(path)) {
                 sendFileToServer(path);
             }
@@ -180,7 +193,8 @@ public class MainWindowController implements Initializable {
         try {
             String item = remoteList.getSelectionModel().getSelectedItem();
             os.writeObject(new RequestFileMessage(item));
-        }catch (IOException e) {
+            setDisablingButton(true);
+        } catch (IOException e) {
             log.error("error while request file from server", e);
         }
     }
@@ -191,10 +205,11 @@ public class MainWindowController implements Initializable {
                     os.writeObject(fileMessage);
                     os.flush();
                 },
-                p -> Platform.runLater(() -> progress.setProgress(p)));
+                p -> Platform.runLater(() -> progress.setProgress(p)),
+                () -> setDisablingButton(false)
+        );
 
     }
-
 
 
     private void deleteFile(Path path) {
@@ -205,5 +220,10 @@ public class MainWindowController implements Initializable {
                 log.error("Error while delete existing file", e);
             }
         }
+    }
+
+    private void setDisablingButton(boolean disable) {
+        sendButton.setDisable(disable);
+        receiveButton.setDisable(disable);
     }
 }
