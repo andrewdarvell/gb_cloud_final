@@ -71,8 +71,8 @@
       </GridPane>
       <AnchorPane prefHeight="200.0" prefWidth="200.0" GridPane.columnIndex="1">
          <children>
-            <Button fx:id="sendButton" layoutX="38.0" layoutY="282.0" mnemonicParsing="false" onAction="#doSendToServerAction" text="&gt;" />
-            <Button fx:id="receiveButton" layoutX="38.0" layoutY="369.0" mnemonicParsing="false" onAction="#doRequestFileAction" text="&lt;" />
+            <Button layoutX="38.0" layoutY="282.0" mnemonicParsing="false" onAction="#doSendToServerAction" text="&gt;" />
+            <Button layoutX="38.0" layoutY="369.0" mnemonicParsing="false" onAction="#doRequestFileAction" text="&lt;" />
             <ProgressIndicator fx:id="progress" layoutX="37.0" layoutY="221.0" progress="0.0" />
          </children>
       </AnchorPane>

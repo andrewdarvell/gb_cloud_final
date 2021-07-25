@@ -26,16 +26,14 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
 
     private boolean authorized = false;
     private Path rootPath;
-    private User user;
 
     private int catalogDeep = 0;
-    private final FileTransmitter fileTransmitter;
+    private FileTransmitter fileTransmitter = new FileTransmitter(this::deleteFile, 8 * 1024);
 
 
     public MessageHandler(String rootPathUri) {
         log.info("Start new message handler");
         this.rootPath = Paths.get(rootPathUri);
-        fileTransmitter = new FileTransmitter(rootPath, this::deleteFile, 8 * 1024);
     }
 
     @Override
@@ -67,7 +65,7 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
         UsersRepository usersRepository = new UserRepositoryImpl();
         Optional<User> userOptional = usersRepository.authUser(authCommand.getLogin(), authCommand.getPassword());
         if (userOptional.isPresent()) {
-            user = userOptional.get();
+            User user = userOptional.get();
             this.rootPath = this.rootPath.resolve(user.getWorkDirName());
             if (!Files.exists(rootPath)) {
                 try {
@@ -77,7 +75,6 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
                     return false;
                 }
             }
-            fileTransmitter.prepareServerFileCheckers(user, rootPath);
             return true;
         } else {
             return false;
@@ -103,7 +100,8 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
                 sendListMessage(ctx);
                 break;
             case FILE_MESSAGE:
-                processFileMessage((FileMessage) command, ctx);
+                processFileMessage((FileMessage) command);
+                sendListMessage(ctx);
                 break;
             case FILE_REQUEST:
                 doSendFile(ctx, (RequestFileMessage) command);
@@ -155,9 +153,9 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
         catalogDeep -= 1;
     }
 
-    private void processFileMessage(FileMessage fileMessage, ChannelHandlerContext ctx) {
+    private void processFileMessage(FileMessage fileMessage) {
 
-        fileTransmitter.receiveFileOnServer(fileMessage, () -> sendListMessage(ctx));
+        fileTransmitter.receiveFile(fileMessage, rootPath, progress -> {});
 
     }
 
@@ -178,7 +176,6 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
                 fileTransmitter.sendFile(pathNew, ctx::writeAndFlush
                         , progress -> {
                         }
-                        , () -> {}
                 );
             }
         }
