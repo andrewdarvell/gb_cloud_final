@@ -2,21 +2,17 @@ package ru.darvell.cloud.common.commands;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import ru.darvell.cloud.client.views.FileListItem;
 import ru.darvell.cloud.common.AbstractCommand;
 import ru.darvell.cloud.common.CommandType;
 
-import java.util.List;
-
 @AllArgsConstructor
 @Data
-public class ListMessage extends AbstractCommand {
+public class DeleteCommand extends AbstractCommand {
 
-    private final String currPath;
-    private final List<FileListItem> files;
+    private final String fileName;
 
     @Override
     public CommandType getType() {
-        return CommandType.LIST_MESSAGE;
+        return CommandType.DELETE_REQUEST;
     }
 }

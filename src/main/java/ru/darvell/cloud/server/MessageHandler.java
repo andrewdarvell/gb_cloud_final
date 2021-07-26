@@ -3,6 +3,7 @@ package ru.darvell.cloud.server;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import lombok.extern.slf4j.Slf4j;
+import ru.darvell.cloud.client.views.FileListItem;
 import ru.darvell.cloud.common.AbstractCommand;
 import ru.darvell.cloud.common.CommandType;
 import ru.darvell.cloud.common.commands.*;
@@ -11,11 +12,13 @@ import ru.darvell.cloud.server.database.repositories.UserRepositoryImpl;
 import ru.darvell.cloud.server.database.repositories.UsersRepository;
 import ru.darvell.cloud.server.models.User;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -42,13 +45,13 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
     protected void channelRead0(ChannelHandlerContext ctx, AbstractCommand command) {
         log.debug("received: {}", command);
         if (!authorized) {
-            processAuth(ctx, command);
+            processAuthOrRegister(ctx, command);
         } else {
             doUserActions(ctx, command);
         }
     }
 
-    private void processAuth(ChannelHandlerContext ctx, AbstractCommand command) {
+    private void processAuthOrRegister(ChannelHandlerContext ctx, AbstractCommand command) {
         if (command.getType() == CommandType.AUTH_MESSAGE) {
             AuthCommand authCommand = (AuthCommand) command;
             if (authUser(authCommand)) {
@@ -57,6 +60,13 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
                 ctx.writeAndFlush(new SuccessAuthMessage());
             } else {
                 sendErrorMessage("Invalid credentials", ctx);
+            }
+        } else if (command.getType() == CommandType.REGISTER_MESSAGE) {
+            RegisterCommand registerCommand = (RegisterCommand) command;
+            if (doRegister(registerCommand, ctx)) {
+                authorized = true;
+                log.info("trying register user");
+                ctx.writeAndFlush(new SuccessAuthMessage());
             }
         } else {
             sendErrorMessage("Auth first!", ctx);
@@ -68,20 +78,50 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
         Optional<User> userOptional = usersRepository.authUser(authCommand.getLogin(), authCommand.getPassword());
         if (userOptional.isPresent()) {
             user = userOptional.get();
-            this.rootPath = this.rootPath.resolve(user.getWorkDirName());
-            if (!Files.exists(rootPath)) {
-                try {
-                    Files.createDirectory(rootPath);
-                } catch (Exception e) {
-                    log.error("error while create user root dir", e);
-                    return false;
-                }
+            boolean rootPathPrepareResult = prepareRootPath();
+            if (!rootPathPrepareResult) {
+                return false;
             }
             fileTransmitter.prepareServerFileCheckers(user, rootPath);
             return true;
         } else {
             return false;
         }
+    }
+
+    private boolean doRegister(RegisterCommand registerCommand, ChannelHandlerContext ctx) {
+        UsersRepository usersRepository = new UserRepositoryImpl();
+        Optional<User> userOptional = usersRepository.getuserByLogin(registerCommand.getLogin());
+        if (userOptional.isPresent()) {
+            sendErrorMessage("Login already exist", ctx);
+            return false;
+        } else {
+            user = usersRepository.addUser(User.builder()
+                    .login(registerCommand.getLogin())
+                    .password(registerCommand.getPassword())
+                    .workDirName(registerCommand.getLogin())
+                    .build()
+            );
+            boolean rootPathPrepareResult = prepareRootPath();
+            if (!rootPathPrepareResult) {
+                return false;
+            }
+            fileTransmitter.prepareServerFileCheckers(user, rootPath);
+            return true;
+        }
+    }
+
+    private boolean prepareRootPath() {
+        this.rootPath = this.rootPath.resolve(user.getWorkDirName());
+        if (!Files.exists(rootPath)) {
+            try {
+                Files.createDirectory(rootPath);
+            } catch (Exception e) {
+                log.error("error while create user root dir", e);
+                return false;
+            }
+        }
+        return true;
     }
 
     private void sendErrorMessage(String message, ChannelHandlerContext ctx) {
@@ -108,8 +148,20 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
             case FILE_REQUEST:
                 doSendFile(ctx, (RequestFileMessage) command);
                 break;
+            case DELETE_REQUEST:
+                doDelete((DeleteCommand) command, ctx);
+                break;
+            case REGISTER_MESSAGE:
+
 
         }
+    }
+
+
+    private void doDelete(DeleteCommand command, ChannelHandlerContext ctx) {
+        Path path = rootPath.resolve(command.getFileName());
+        deleteFile(path);
+        sendListMessage(ctx);
     }
 
 
@@ -117,10 +169,11 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
         ctx.writeAndFlush(new ListMessage(rootPath.toString(), getRootPathChilds()));
     }
 
-    private List<String> getRootPathChilds() {
+    private List<FileListItem> getRootPathChilds() {
         if (Files.isDirectory(rootPath)) {
             try (Stream<Path> paths = Files.list(rootPath)) {
-                return paths.map(path -> path.getFileName().toString()).collect(Collectors.toList());
+                return paths.map(i -> new FileListItem(i.getFileName().toString(), Files.isDirectory(i)))
+                        .collect(Collectors.toList());
             } catch (IOException e) {
                 log.error("Cannot get root childs", e);
             }
@@ -162,12 +215,25 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
     }
 
     private void deleteFile(Path path) {
-        if (Files.exists(path)) {
-            try {
-                Files.delete(path);
-            } catch (IOException e) {
-                log.error("Error while delete existing file", e);
+        try {
+            if (Files.isDirectory(path)) {
+                deleteFolder(path);
+            } else {
+                Files.deleteIfExists(path);
             }
+        } catch (IOException e) {
+            log.error("Error while delete existing file", e);
+        }
+    }
+
+    private void deleteFolder(Path path) {
+        try {
+            Files.walk(path)
+                    .sorted(Comparator.reverseOrder())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+        } catch (IOException exception) {
+            exception.printStackTrace();
         }
     }
 
@@ -178,7 +244,8 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
                 fileTransmitter.sendFile(pathNew, ctx::writeAndFlush
                         , progress -> {
                         }
-                        , () -> {}
+                        , () -> {
+                        }
                 );
             }
         }

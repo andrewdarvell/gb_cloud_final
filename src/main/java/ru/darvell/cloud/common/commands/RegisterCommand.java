@@ -4,18 +4,20 @@ import lombok.*;
 import ru.darvell.cloud.common.AbstractCommand;
 import ru.darvell.cloud.common.CommandType;
 
+import static ru.darvell.cloud.common.CommandType.REGISTER_MESSAGE;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-public class AuthCommand extends AbstractCommand {
+public class RegisterCommand extends AbstractCommand {
 
     private String login;
     private String password;
 
     @Override
     public CommandType getType() {
-        return CommandType.AUTH_MESSAGE;
+        return REGISTER_MESSAGE;
     }
 }

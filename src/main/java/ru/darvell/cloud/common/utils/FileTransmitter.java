@@ -56,14 +56,7 @@ public class FileTransmitter {
                     }
                     log.debug("messages count {}, current number {}", fileMessage.getMessagesCount(), fileMessage.getCurrMessageNumber());
                     progressUpdater.update((double) fileMessage.getCurrMessageNumber() / (fileMessage.getMessagesCount() - 1));
-
-
-//                    Files.write(path, fileMessage.getFileData(), APPEND);
-                    FileOutputStream fileOutputStream = new FileOutputStream(path.toString(), true);
-                    fileOutputStream.write(fileMessage.getFileData());
-                    fileOutputStream.flush();
-                    fileOutputStream.close();
-
+                    Files.write(path, fileMessage.getFileData(), APPEND);
                     if (fileMessage.isFinalPart()) {
                         finisher.onFinish();
                     }
@@ -172,6 +165,7 @@ public class FileTransmitter {
                 finisher.onFinish();
             } catch (IOException e) {
                 log.error("error while sending multipart file to server", e);
+                finisher.onFinish();
             }
         });
         thread.setDaemon(true);

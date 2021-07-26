@@ -14,6 +14,7 @@ import io.netty.handler.codec.serialization.ObjectEncoder;
 import lombok.extern.slf4j.Slf4j;
 import ru.darvell.cloud.server.database.creator.DBInitializer;
 import ru.darvell.cloud.server.exceptions.ServerException;
+import ru.darvell.cloud.server.services.BrokenDownloadFileDeleter;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -23,18 +24,15 @@ import java.nio.file.Paths;
 
 @Slf4j
 public class Server {
-    private final String ROOT_STORAGE_PATH = "storage";
+
+    private static final String ROOT_STORAGE_PATH = "storage";
 
     public void run() {
-        try {
-            DBInitializer dbInitializer = new DBInitializer();
-            dbInitializer.doInitial();
-        } catch (ServerException e) {
-            log.error("Server error while check/create DB", e);
-            System.exit(-1);
-        }
 
-        Path storagePath = Paths.get("storage");
+        checkAndInitDB();
+        runBrokenFileDeleter();
+
+        Path storagePath = Paths.get(ROOT_STORAGE_PATH);
         if (!Files.exists(storagePath)) {
             try {
                 Files.createDirectory(storagePath);
@@ -69,6 +67,22 @@ public class Server {
             log.error("Something wrong with server", e);
             Thread.currentThread().interrupt();
         }
+    }
+
+    private void checkAndInitDB() {
+        try {
+            DBInitializer dbInitializer = new DBInitializer();
+            dbInitializer.doInitial();
+        } catch (ServerException e) {
+            log.error("Server error while check/create DB", e);
+            System.exit(-1);
+        }
+    }
+
+    private void runBrokenFileDeleter() {
+        Thread thread = new Thread(new BrokenDownloadFileDeleter());
+        thread.setDaemon(true);
+        thread.start();
     }
 
 }
