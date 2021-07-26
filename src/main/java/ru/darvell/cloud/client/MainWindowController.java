@@ -6,10 +6,7 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
-import javafx.scene.image.ImageView;
-import javafx.util.Callback;
 import lombok.extern.slf4j.Slf4j;
-import ru.darvell.cloud.client.views.DeleteListAction;
 import ru.darvell.cloud.client.views.FileListItem;
 import ru.darvell.cloud.client.views.MyListCell;
 import ru.darvell.cloud.common.AbstractCommand;
@@ -31,11 +28,10 @@ import java.util.stream.Stream;
 @Slf4j
 public class MainWindowController implements Initializable {
 
-    private final static int FILE_PACKAGE_SIZE = 8 * 1024;
+    private static final int FILE_PACKAGE_SIZE = 8 * 1024;
 
     private ObjectEncoderOutputStream os;
     private ObjectDecoderInputStream is;
-    private Socket socket;
 
     private FileTransmitter fileTransmitter;
 
@@ -69,6 +65,15 @@ public class MainWindowController implements Initializable {
         addNavigationListeners();
     }
 
+    public void onRootTextEnter() {
+        log.debug("Enter on root navigation");
+        Path newRootPath = rootPath.resolve(localPathText.getText());
+        if (Files.isDirectory(newRootPath) && Files.exists(newRootPath)) {
+            updateRootPath(newRootPath);
+            updateLocalFileList();
+        }
+    }
+
     public void setWorkingSocket(Socket socket) {
         try {
             log.debug("Send data to main window process");
@@ -84,16 +89,55 @@ public class MainWindowController implements Initializable {
         }
     }
 
+    private void updateRootPath(Path path) {
+        this.rootPath = path;
+        this.fileTransmitter.updateRoot(path);
+    }
+
     private void initCellFactory() {
         localList.setCellFactory(param -> new MyListCell(fileName -> {
             Path path = rootPath.resolve(fileName);
             deleteFile(path);
             updateLocalFileList();
+        }, res -> {
+            renameLocalFile(
+                    localList.getSelectionModel().getSelectedItem().getName()
+                    , res);
+            updateLocalFileList();
+        }, res -> {
+            createLocalFolder(res);
+            updateLocalFileList();
         }));
+
         remoteList.setCellFactory(param -> new MyListCell(fileName -> {
             sendDeleteFileCommand(fileName);
             sendListCommand();
-        }));
+        }, res -> sendRenameCommand(
+                remoteList.getSelectionModel().getSelectedItem().getName()
+                , res
+        ), res -> sendCreateFolderCommand(res)));
+    }
+
+    private void createLocalFolder(String folderName) {
+        try {
+            Path newFolderPath = rootPath.resolve(folderName);
+            if (!Files.exists(newFolderPath)) {
+                Files.createDirectory(newFolderPath);
+            }
+        } catch (IOException e) {
+            log.error("Error while create folder", e);
+        }
+    }
+
+    private void renameLocalFile(String oldFileName, String newFileName) {
+        try {
+            Files.move(
+                    rootPath.resolve(oldFileName),
+                    rootPath.resolve(newFileName)
+            );
+        } catch (IOException e) {
+            log.error("Error while rename file", e);
+        }
     }
 
     private void initReader() {
@@ -123,6 +167,8 @@ public class MainWindowController implements Initializable {
                                         updateLocalFileList();
                                     }));
                             break;
+                        default:
+                            log.debug("Receive unknown message");
                     }
                 }
             } catch (Exception e) {
@@ -157,7 +203,7 @@ public class MainWindowController implements Initializable {
                 FileListItem item = localList.getSelectionModel().getSelectedItem();
                 Path newPath = rootPath.resolve(item.getName());
                 if (Files.isDirectory(newPath)) {
-                    rootPath = newPath;
+                    updateRootPath(newPath);
                     updateLocalPathText();
                 }
             }
@@ -181,9 +227,28 @@ public class MainWindowController implements Initializable {
         }
     }
 
+    private void sendRenameCommand(String oldValue, String newValue) {
+        try {
+            os.writeObject(new RenameCommand(oldValue, newValue));
+            os.flush();
+        } catch (IOException e) {
+            log.error("Cannot send rename command", e);
+        }
+    }
+
+    private void sendCreateFolderCommand(String folderName) {
+        try {
+            os.writeObject(new CreateFolderCommand(folderName));
+            os.flush();
+        } catch (IOException e) {
+            log.error("Cannot send create folder command", e);
+        }
+    }
+
     public void clickLocalUpButton() {
         if (rootPath.getParent() != null) {
-            rootPath = rootPath.getParent();
+            updateRootPath(rootPath.getParent());
+            log.debug("New root path {}", rootPath);
         }
         updateLocalPathText();
     }
@@ -275,4 +340,6 @@ public class MainWindowController implements Initializable {
         sendButton.setDisable(disable);
         receiveButton.setDisable(disable);
     }
+
+
 }

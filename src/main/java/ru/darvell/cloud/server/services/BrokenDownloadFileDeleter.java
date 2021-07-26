@@ -1,6 +1,5 @@
 package ru.darvell.cloud.server.services;
 
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import ru.darvell.cloud.server.database.repositories.MstatRepository;
 import ru.darvell.cloud.server.database.repositories.MstatRepositoryImpl;

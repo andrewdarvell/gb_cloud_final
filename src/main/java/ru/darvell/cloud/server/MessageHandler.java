@@ -151,12 +151,46 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
             case DELETE_REQUEST:
                 doDelete((DeleteCommand) command, ctx);
                 break;
-            case REGISTER_MESSAGE:
-
-
+            case RENAME_REQUEST:
+                doRename((RenameCommand) command);
+                sendListMessage(ctx);
+                break;
+            case CREATE_FOLDER:
+                doCreateFolder((CreateFolderCommand) command);
+                sendListMessage(ctx);
+                break;
+            default:
+                log.debug("Receive unknown message");
         }
     }
 
+    private void doRename(RenameCommand renameCommand) {
+        if (renameCommand.getOldValue() != null && !renameCommand.getOldValue().isEmpty()
+                && renameCommand.getNewValue() != null && !renameCommand.getNewValue().isEmpty()
+        ) {
+            try {
+                Files.move(
+                        rootPath.resolve(renameCommand.getOldValue()),
+                        rootPath.resolve(renameCommand.getNewValue())
+                );
+            } catch (IOException e) {
+                log.error("Error while rename file", e);
+            }
+        }
+    }
+
+    private void doCreateFolder(CreateFolderCommand createFolderCommand) {
+        if (createFolderCommand.getNewName() != null && !createFolderCommand.getNewName().isEmpty()) {
+            try {
+                Path newFolderPath = rootPath.resolve(createFolderCommand.getNewName());
+                if (!Files.exists(newFolderPath)) {
+                    Files.createDirectory(newFolderPath);
+                }
+            } catch (IOException e) {
+                log.error("Error while create folder", e);
+            }
+        }
+    }
 
     private void doDelete(DeleteCommand command, ChannelHandlerContext ctx) {
         Path path = rootPath.resolve(command.getFileName());
@@ -186,6 +220,7 @@ public class MessageHandler extends SimpleChannelInboundHandler<AbstractCommand>
         Path pathNew = rootPath.resolve(dir);
         if (Files.isDirectory(pathNew)) {
             rootPath = pathNew;
+            fileTransmitter.updateRoot(rootPath);
             increaseDeep();
         }
     }
