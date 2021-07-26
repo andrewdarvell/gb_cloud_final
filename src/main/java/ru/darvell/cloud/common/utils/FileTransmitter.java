@@ -33,6 +33,10 @@ public class FileTransmitter {
         this.rootPath = rootPath;
     }
 
+    public void updateRoot(Path rootPath) {
+        this.rootPath = rootPath;
+    }
+
 
     public void prepareServerFileCheckers(User user, Path path) {
         this.user = user;

@@ -39,7 +39,7 @@
               </rowConstraints>
                <children>
                   <Button mnemonicParsing="false" onAction="#clickLocalUpButton" text="UP" GridPane.columnIndex="1" />
-                  <TextField fx:id="localPathText" prefHeight="25.0" prefWidth="292.0" />
+                  <TextField fx:id="localPathText" prefHeight="25.0" prefWidth="292.0" onAction="#onRootTextEnter" />
                </children>
             </GridPane>
          </children>
@@ -64,7 +64,7 @@
                </rowConstraints>
                <children>
                   <Button mnemonicParsing="false" onAction="#clickRemoteUpButton" text="UP" GridPane.columnIndex="1" />
-                  <TextField fx:id="remotePathText" prefHeight="25.0" prefWidth="292.0" />
+                  <TextField fx:id="remotePathText" prefHeight="25.0" prefWidth="292.0" editable="false"/>
                </children>
             </GridPane>
          </children>
